@@ -25,7 +25,7 @@ def impute_with_median(df):
     Where NaNs exist replace with median"""
 
     # Get list of DataFrame column names
-    cols = list(df)
+    cols = list(df.columns)
     # Loop through columns
     for column in cols:
         # Transfer column to independent series
@@ -47,6 +47,7 @@ from sklearn.preprocessing import LabelEncoder
 
 # Auto encodes any dataframe column of type category or object.
 def dummyEncode(df):
+
     columnsToEncode = list(df.select_dtypes(include=['category', 'object']))
     le = LabelEncoder()
     # enc = OneHotEncoder(handle_unknown='ignore')
@@ -56,24 +57,21 @@ def dummyEncode(df):
             # df[feature]=enc.fit_transform(df[feature])
 
         except:
-            print('Error encoding ' + feature)
+            print('Error encoding: ' + feature)
     return df
 
-
-
-
-
 def main():
+
    """"Hotel booked """
 
    st.title("Hotel Booked ")
    st.subheader("Predict whether or not a customer will cancel a room")
 
-   menu=['EDA','Machine Learning' ]
+   menu=['Exploritory Data Anlysis','Machine Learning' ]
    choices=st.sidebar.selectbox("Select",menu)
 
-   if choices=='EDA':
-       st.subheader("EDA")
+   if choices == 'Exploritory Data Anlysis':
+       st.subheader("Exploritory Data Anlysis")
        #data = st.file_uploader("upload datset", type=['csv', 'txt'])
        data = pd.read_csv("hotel_bookings.csv")
        if data is not None:
@@ -90,14 +88,7 @@ def main():
            if st.checkbox("show Summary"):
                st.write(df.describe())
 
-
-
-
-
-
-
-
-   if choices == 'Machine Learning':
+   elif choices == 'Machine Learning':
        st.subheader('Machine Learning')
        # Remove two columns name is 'Country' and 'reservation',company
        data = pd.read_csv("hotel_bookings.csv")
@@ -172,14 +163,8 @@ def main():
        st.write('Confusion matrix: ', cm)
 
 
-
-       st.subheader('ROC_AUC CURVE ')
+       st.subheader('Receiver Operating Characteristic Accuracy Curve')
        st.write( roc_auc_score(y_test, y_pred))
-
-
-
-
-
 
 
 if __name__ == '__main__':
