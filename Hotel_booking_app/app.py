@@ -1,171 +1,118 @@
-#core pkgsstreamlit
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
-import seaborn as sns
-import pandas_profiling as pp
-import matplotlib
-matplotlib.use('Agg')
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_curve
-from sklearn.metrics import confusion_matrix
-from sklearn.svm import SVC
-# Evaluating Result
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
-from sklearn.metrics import roc_auc_score
-
-
-
-# function to  Iterate through columns of Pandas DataFrame.Where NaNs exist replace with median
 def impute_with_median(df):
-    """Iterate through columns of Pandas DataFrame.
-    Where NaNs exist replace with median"""
+    columns = list(df.columns)
 
-    # Get list of DataFrame column names
-    cols = list(df.columns)
-    # Loop through columns
-    for column in cols:
-        # Transfer column to independent series
+    for column in columns:
         col_data = df[column]
-        # Look to see if there is any missing numerical data
         missing_data = sum(col_data.isna())
-        if missing_data > 0:
-            # Get median and replace missing numerical data with median
-            col_median = col_data.median()
-            col_data.fillna(col_median, inplace=True)
-            df[column] = col_data
-    return df
 
+        if missing_data > 0:
+            col_median = col_data.median()
+            col_data.fillna(col_median, inplace = True)
+            df[column] = col_data
+
+    return df
 
 from sklearn.preprocessing import LabelEncoder
 
-
-# from sklearn.preprocessing import OneHotEncoder
-
-# Auto encodes any dataframe column of type category or object.
 def dummyEncode(df):
-
-    columnsToEncode = list(df.select_dtypes(include=['category', 'object']))
+    columnsToEncode = list(df.select_dtypes(include = ['category', 'object']))
     le = LabelEncoder()
-    # enc = OneHotEncoder(handle_unknown='ignore')
+
     for feature in columnsToEncode:
         try:
             df[feature] = le.fit_transform(df[feature])
-            # df[feature]=enc.fit_transform(df[feature])
 
         except:
-            print('Error encoding: ' + feature)
+            print(f'Error encoding: {feature}')
+
     return df
 
 def main():
 
-   """"Hotel booked """
+    st.title("Hotel Booked")
+    st.subheader("Predict whether or not a customer will cancel a room")
 
-   st.title("Hotel Booked ")
-   st.subheader("Predict whether or not a customer will cancel a room")
+    menu = ['Exploritory Data Anlysis', 'Machine Learning']
+    choices = st.sidebar.selectbox("Select", menu)
 
-   menu=['Exploritory Data Anlysis','Machine Learning' ]
-   choices=st.sidebar.selectbox("Select",menu)
+    data = pd.read_csv("hotel_bookings.csv")
 
-   if choices == 'Exploritory Data Anlysis':
-       st.subheader("Exploritory Data Anlysis")
-       #data = st.file_uploader("upload datset", type=['csv', 'txt'])
-       data = pd.read_csv("hotel_bookings.csv")
-       if data is not None:
-           df = data
-           st.dataframe(df.head())
+    if choices == 'Exploritory Data Anlysis':
+        st.subheader("Exploritory Data Anlysis")
 
-           if st.checkbox("show shape"):
-               st.write(df.shape)
+        if data is not None:
+            df = data.copy()
+            st.dataframe(df.head())
 
-           if st.checkbox("show colums"):
-               all_columns = df.columns.to_list()
-               st.write(df.columns)
+            if st.checkbox("Show Shape:"):
+                st.write(df.shape)
 
-           if st.checkbox("show Summary"):
-               st.write(df.describe())
+            if st.checkbox("Show Columns:"):
+                all_columns = df.columns.to_list()
+                st.write(df.columns)
 
-   elif choices == 'Machine Learning':
-       st.subheader('Machine Learning')
-       # Remove two columns name is 'Country' and 'reservation',company
-       data = pd.read_csv("hotel_bookings.csv")
-       df = data.drop(['company', 'country', 'reservation_status_date'], axis=1)
-       st.subheader('check if null value ')
-       df_imputed = impute_with_median(df)
-       st.write(df_imputed.isnull().sum())
-       dataset_encoded = dummyEncode(df_imputed)
-       st.write(dataset_encoded.info())
-       X = dataset_encoded.drop(columns='is_canceled')
-       y = dataset_encoded['is_canceled']
+            if st.checkbox("Show Summary:"):
+                st.write(df.describe())
 
-       # generate the datasets for training. Test 20%
-       X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                           test_size=0.2,
-                                                           random_state=0)
+            if st.checkbox("Show Report:"):
+                st.write(data.profile_report())
 
-       from sklearn.preprocessing import StandardScaler
-       # generate an standarScalar
-       sc_X = StandardScaler()
+    elif choices == 'Machine Learning':
+        st.subheader('Machine Learning')
+        df = data.drop(['company', 'country', 'reservation_status_date'], axis = 1)
 
-       # StandardScaler return a Numpy Array so we need to convert to a Dataframe
-       X_train2 = pd.DataFrame(sc_X.fit_transform(X_train))
-       X_test2 = pd.DataFrame(sc_X.fit_transform(X_test))
+        st.subheader('check if null value ')
+        df_imputed = impute_with_median(df)
+        st.write(df_imputed.isnull().sum())
 
-       # copy columns name to the new traning and testing dataset
-       X_train2.columns = X_train.columns.values
-       X_test2.columns = X_test.columns.values
+        dataset_encoded = dummyEncode(df_imputed)
+        st.write(dataset_encoded.info())
 
-       # copy index to the new traning and testing dataset
-       X_train2.index = X_train.index.values
-       X_test2.index = X_test.index.values
+        X = dataset_encoded.drop(columns = 'is_canceled')
+        y = dataset_encoded['is_canceled']
 
-       # reasigned copy dataset to original
-       X_train = X_train2
-       X_test = X_test2
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import train_test_split
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
 
-       st.subheader('Xtrain')
-       st.dataframe(X_train.head())
-       st.subheader('Xtest')
-       st.dataframe(X_test.head())
-       st.subheader('Y_test')
-       st.dataframe(y_test.head())
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
 
-       classifier = LogisticRegression(random_state=0, solver='lbfgs')
-       classifier.fit(X_train, y_train)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
 
-       st.subheader('Logistic regression model accuracy ')
-       st.write(classifier.score(X_test, y_test))
+        st.subheader('X_train')
+        st.dataframe(pd.DataFrame(X_train).head())
 
-       #clf = SVC(gamma='auto')
-       #clf.fit(X_train, y_train)
-       #st.subheader('SVM accuracy ')
-       #st.write(clf.score(X_test, y_test))
+        st.subheader('y_train')
+        st.dataframe(pd.DataFrame(y_train).head())
 
-       # Evaluating Test set
-       y_pred = classifier.predict(X_test)
+        clf = LogisticRegression(random_state = 0, solver = 'lbfgs')
+        clf.fit(X_train, y_train)
 
-       st.subheader('Precision_score ')
-       pre=precision_score(y_test, y_pred)
-       rec=recall_score(y_test,y_pred)
+        st.subheader('Logistic regression model accuracy:')
+        st.write(round(clf.score(X_test, y_test), 3))
 
-       st.write(precision_score(y_test, y_pred))
+        y_pred = clf.predict(X_test)
 
-       st.subheader('Recall')
-       st.write(recall_score(y_test, y_pred))
+        st.subheader('Precision_score:')
+        st.write(round(precision_score(y_test, y_pred), 3))
 
-       st.subheader('F1 Score ')
-       st.write(f1_score(y_test, y_pred))
+        st.subheader('Recall:')
+        st.write(round(recall_score(y_test, y_pred), 3))
 
-       cm = confusion_matrix(y_test, y_pred)
-       st.write('Confusion matrix: ', cm)
+        st.subheader('F1 Score:')
+        st.write(round(f1_score(y_test, y_pred), 3))
 
+        cm = confusion_matrix(y_test, y_pred)
+        st.write('Confusion matrix:', cm)
 
-       st.subheader('Receiver Operating Characteristic Accuracy Curve')
-       st.write( roc_auc_score(y_test, y_pred))
-
+        st.subheader('Receiver Operating Characteristic Accuracy Curve:')
+        st.write(round(roc_auc_score(y_test, y_pred), 3))
 
 if __name__ == '__main__':
     main()
